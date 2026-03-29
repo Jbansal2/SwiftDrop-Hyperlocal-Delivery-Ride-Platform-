@@ -8,8 +8,6 @@ import redis from '../../config/redis.js'
 import { authenticate } from '../../middleware/authenticate.js'
 
 export default async function authRoutes(fastify) {
-
-    // ═══ ROUTE 1: send-otp ═══
     fastify.post('/send-otp', {
         schema: {
             body: {
@@ -28,7 +26,6 @@ export default async function authRoutes(fastify) {
             })
         }
 
-        // Rate limit — 3 OTP per 5 min
         const attempts = await redis.incr(`otp_attempts:${phone}`)
         if (attempts === 1) await redis.expire(`otp_attempts:${phone}`, 300)
         if (attempts > 3) {
@@ -48,7 +45,6 @@ export default async function authRoutes(fastify) {
         }
     })
 
-    // ═══ ROUTE 2: verify-otp ═══
     fastify.post('/verify-otp', {
         schema: {
             body: {
@@ -110,8 +106,6 @@ export default async function authRoutes(fastify) {
         }
     })
 
-
-    // ═══ ROUTE 4: refresh-token ═══
     fastify.post('/refresh-token', {
         schema: {
             body: {
@@ -122,14 +116,10 @@ export default async function authRoutes(fastify) {
         }
     }, async (req, reply) => {
         const { refreshToken } = req.body
-
-        // Refresh token verify karo
         const decoded = verifyToken(refreshToken, process.env.JWT_REFRESH_SECRET)
         if (!decoded) {
             return reply.code(401).send({ success: false, message: 'Refresh token invalid ya expire' })
         }
-
-        // DB mein token match karo — security ke liye
         const [user] = await db
             .select()
             .from(users)
@@ -139,22 +129,15 @@ export default async function authRoutes(fastify) {
         if (!user || user.refreshToken !== refreshToken) {
             return reply.code(401).send({ success: false, message: 'Token mismatch — dobara login karo' })
         }
-
-        // Nayi token pair banao
         const newAccessToken = generateAccessToken({ userId: user.id, phone: user.phone, role: user.role })
         const newRefreshToken = generateRefreshToken({ userId: user.id })
-
-        // Nayi refresh token DB mein save karo
         await db.update(users).set({ refreshToken: newRefreshToken }).where(eq(users.id, user.id))
 
         return { success: true, accessToken: newAccessToken, refreshToken: newRefreshToken }
     })
-
-    // ═══ ROUTE 5: logout ═══
     fastify.post('/logout', {
         preHandler: [authenticate]
     }, async (req, reply) => {
-        // DB mein refresh token null karo
         await db.update(users)
             .set({ refreshToken: null })
             .where(eq(users.id, req.user.userId))

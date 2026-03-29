@@ -9,13 +9,9 @@ import adminRoutes from './routes/admin/index.js'
 import rideRoutes from './routes/ride/index.js'
 import orderRoutes from './routes/order/index.js'
 import paymentRoutes from './routes/payment/index.js'
-
-// Fastify instance banao
 const app = Fastify({
   logger: true 
 })
-
-// Plugins register karo
 await app.register(cors, {
   origin: true 
 })
@@ -29,8 +25,6 @@ await app.register(adminRoutes, { prefix: '/admin' })
 await app.register(rideRoutes, { prefix: '/ride' })
 await app.register(orderRoutes, { prefix: '/order' })
 await app.register(paymentRoutes, { prefix: '/payment' })
-
-// Health check route 
 app.get('/', async () => {
   return {
     status: 'ok',
@@ -38,8 +32,6 @@ app.get('/', async () => {
     version: '1.0.0'
   }
 })
-
-// Server start
 const start = async () => {
   try {
     await testDBConnection()

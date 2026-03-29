@@ -9,7 +9,7 @@ export const paymentTypeEnum = pgEnum('payment_type', ['ride', 'order'])
 export const payments = pgTable('payments', {
   id: uuid('id').defaultRandom().primaryKey(),
   userId: uuid('user_id').notNull(),
-  referenceId: uuid('reference_id').notNull(), // ride_id ya order_id
+  referenceId: uuid('reference_id').notNull(),
   type: paymentTypeEnum('type').notNull(),
   amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
   razorpayOrderId: varchar('razorpay_order_id', { length: 100 }),

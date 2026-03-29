@@ -7,16 +7,12 @@ import { getDistanceAndDuration, calculateParcelFare } from '../../services/maps
 import { generateOTP } from '../../utils/otp.js'
 
 export default async function orderRoutes(fastify) {
-
-  // ═══ ROUTE 1: estimate ═══
   fastify.post('/estimate', { preHandler: [authenticate] }, async (req, reply) => {
     const { pickupLat, pickupLng, dropLat, dropLng, weightKg = 1, paymentMode = 'prepaid' } = req.body
     const { distanceKm } = await getDistanceAndDuration(pickupLat, pickupLng, dropLat, dropLng)
     const { fare, platformCut, driverEarning } = calculateParcelFare(distanceKm, weightKg, paymentMode === 'cod')
     return { success: true, estimate: { fare, platformCut, driverEarning, distanceKm } }
   })
-
-  // ═══ ROUTE 2: create order ═══
   fastify.post('/create', {
     preHandler: [authenticate],
     schema: {
@@ -43,16 +39,10 @@ export default async function orderRoutes(fastify) {
       weightKg = 1, description, paymentMode = 'prepaid', codAmount = 0
     } = req.body
     const { userId } = req.user
-
-    // Fare calculate karo
     const { distanceKm } = await getDistanceAndDuration(pickupLat, pickupLng, dropLat, dropLng)
     const { fare, platformCut, driverEarning } = calculateParcelFare(distanceKm, weightKg, paymentMode === 'cod')
-
-    // Dono OTPs generate karo
     const pickupOtp = generateOTP()
     const deliveryOtp = generateOTP()
-
-    // Order banao
     const [order] = await db.insert(orders).values({
       userId, senderName, senderPhone, receiverName, receiverPhone,
       pickupAddress, pickupLat: String(pickupLat), pickupLng: String(pickupLng),
@@ -68,8 +58,6 @@ export default async function orderRoutes(fastify) {
       order: { id: order.id, status: order.status, estimatedFare: fare, distanceKm }
     })
   })
-
-  // ═══ ROUTE 3: driver accept order ═══
   fastify.patch('/:id/accept', { preHandler: [driverAuth] }, async (req, reply) => {
     const { id } = req.params
     const [driver] = await db.select().from(drivers).where(eq(drivers.userId, req.user.userId)).limit(1)
@@ -77,8 +65,6 @@ export default async function orderRoutes(fastify) {
     await db.update(orders).set({ driverId: driver.id, status: 'accepted', acceptedAt: new Date() }).where(eq(orders.id, id))
     return { success: true, message: 'Order accepted! Pickup ke liye jao.' }
   })
-
-  // ═══ ROUTE 4: pickup OTP verify ═══
   fastify.patch('/:id/pickup', {
     preHandler: [driverAuth],
     schema: { body: { type: 'object', required: ['otp'], properties: { otp: { type: 'string' } } } }
@@ -91,8 +77,6 @@ export default async function orderRoutes(fastify) {
     await db.update(orders).set({ status: 'picked_up', pickedUpAt: new Date() }).where(eq(orders.id, id))
     return { success: true, message: 'Parcel picked up! Ab deliver karo.' }
   })
-
-  // ═══ ROUTE 5: delivery OTP verify ═══
   fastify.patch('/:id/deliver', {
     preHandler: [driverAuth],
     schema: { body: { type: 'object', required: ['otp'], properties: { otp: { type: 'string' } } } }
@@ -102,8 +86,6 @@ export default async function orderRoutes(fastify) {
     const [order] = await db.select().from(orders).where(eq(orders.id, id)).limit(1)
     if (!order) return reply.code(404).send({ success: false, message: 'Order nahi mila' })
     if (order.deliveryOtp !== otp) return reply.code(400).send({ success: false, message: 'Delivery OTP galat' })
-
-    // Deliver karo + COD mark karo
     await db.update(orders).set({
       status: 'delivered',
       finalFare: order.estimatedFare,
@@ -119,8 +101,6 @@ export default async function orderRoutes(fastify) {
       codCollected: order.paymentMode === 'cod'
     }
   })
-
-  // ═══ ROUTE 6: track order ═══
   fastify.get('/:id/track', { preHandler: [authenticate] }, async (req, reply) => {
     const [order] = await db.select().from(orders).where(eq(orders.id, req.params.id)).limit(1)
     if (!order) return reply.code(404).send({ success: false, message: 'Order nahi mila' })
@@ -133,15 +113,11 @@ export default async function orderRoutes(fastify) {
       }
     }
   })
-
-  // ═══ ROUTE 7: order history ═══
   fastify.get('/history', { preHandler: [authenticate] }, async (req, reply) => {
     const { userId } = req.user
     const history = await db.select().from(orders).where(eq(orders.userId, userId))
     return { success: true, count: history.length, orders: history }
   })
-
-  // ═══ ROUTE 8: cancel order ═══
   fastify.patch('/:id/cancel', { preHandler: [authenticate] }, async (req, reply) => {
     const { id } = req.params
     const { reason = 'User cancelled' } = req.body || {}
@@ -153,5 +129,4 @@ export default async function orderRoutes(fastify) {
     await db.update(orders).set({ status: 'cancelled', cancelReason: reason }).where(eq(orders.id, id))
     return { success: true, message: 'Order cancelled' }
   })
-
-} // closing bracket
+}

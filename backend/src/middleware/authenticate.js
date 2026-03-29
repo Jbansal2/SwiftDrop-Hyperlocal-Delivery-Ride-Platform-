@@ -10,11 +10,7 @@ export async function authenticate(req, reply) {
         message: 'Token Not Found'
       })
     }
-
-    // Bearer hata ke sirf token lo
     const token = authHeader.split(' ')[1]
-
-    // Token verify karo
     const decoded = verifyToken(token, process.env.JWT_SECRET)
 
     if (!decoded) {
@@ -32,13 +28,8 @@ export async function authenticate(req, reply) {
     })
   }
 }
-
-// Admin only middleware
 export async function adminAuth(req, reply) {
-  // Pehle normal auth check karo
   await authenticate(req, reply)
-
-  // Phir admin role check karo
   if (req.user?.role !== 'admin') {
     return reply.code(403).send({
       success: false,
@@ -46,8 +37,6 @@ export async function adminAuth(req, reply) {
     })
   }
 }
-
-// Driver only middleware
 export async function driverAuth(req, reply) {
   await authenticate(req, reply)
 

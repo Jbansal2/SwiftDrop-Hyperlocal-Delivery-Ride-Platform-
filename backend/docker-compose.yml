@@ -1,6 +1,4 @@
 services:
-
-  # SwiftDrop Backend App
   app:
     build: .
     ports:
@@ -14,10 +12,9 @@ services:
     depends_on:
       - redis
     volumes:
-      - .:/app # live reload
+      - .:/app 
       - /app/node_modules
 
-  # Local Redis (dev only — prod mein Upstash use karo)
   redis:
     image: redis:7-alpine
     ports:

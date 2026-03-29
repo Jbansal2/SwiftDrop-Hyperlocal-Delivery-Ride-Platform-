@@ -7,13 +7,12 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 })
 
-// Base64 image Cloudinary pe upload karo
 export async function uploadToCloudinary(base64Image, folder) {
   try {
     const result = await cloudinary.uploader.upload(base64Image, {
       folder: `swiftdrop/${folder}`,
       resource_type: 'image',
-      quality: 'auto' // auto compress
+      quality: 'auto'
     })
     return result.secure_url
   } catch (err) {
