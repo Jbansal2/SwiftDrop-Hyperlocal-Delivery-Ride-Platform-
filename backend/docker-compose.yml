@@ -1,0 +1,29 @@
+services:
+
+  # SwiftDrop Backend App
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET}
+      - FAST2SMS_API_KEY=${FAST2SMS_API_KEY}
+    depends_on:
+      - redis
+    volumes:
+      - .:/app # live reload
+      - /app/node_modules
+
+  # Local Redis (dev only — prod mein Upstash use karo)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:

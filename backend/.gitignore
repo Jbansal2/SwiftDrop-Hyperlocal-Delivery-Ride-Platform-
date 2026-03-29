@@ -1,0 +1,12 @@
+# Secrets — kabhi GitHub pe mat jaane do
+.env
+.env.local
+
+# Dependencies
+node_modules/
+
+# Drizzle generated
+drizzle/
+
+# Logs
+*.log
