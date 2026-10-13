@@ -30,8 +30,8 @@ partner/   # Expo mobile app
 One command brings up Postgres, Redis, runs the migrations and starts the API:
 
 ```bash
-cd backend
-docker compose up --build
+docker compose up --build          # from the repo root
+# or: cd backend && docker compose up --build
 ```
 
 - API: `http://localhost:3000` — health: `GET /health` (checks Postgres + Redis, 503 if either is down)

@@ -1,0 +1,4 @@
+# lets the whole stack start from the repo root:  docker compose up --build
+# the services themselves live in backend/docker-compose.yml
+include:
+  - backend/docker-compose.yml
