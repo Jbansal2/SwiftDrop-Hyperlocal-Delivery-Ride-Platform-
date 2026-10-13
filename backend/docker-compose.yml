@@ -1,19 +1,20 @@
+# one command brings up the whole stack:  docker compose up --build
+# api on http://localhost:3000, postgres on 5432, redis on 6379
 services:
-  app:
-    build: .
-    ports:
-      - "3000:3000"
+  postgres:
+    image: postgres:16-alpine
     environment:
-      - NODE_ENV=development
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=${JWT_SECRET}
-      - FAST2SMS_API_KEY=${FAST2SMS_API_KEY}
-    depends_on:
-      - redis
+      POSTGRES_USER: swiftdrop
+      POSTGRES_PASSWORD: swiftdrop
+      POSTGRES_DB: swiftdrop
+    ports:
+      - "5432:5432"
     volumes:
-      - .:/app 
-      - /app/node_modules
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U swiftdrop"]
+      interval: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
@@ -21,6 +22,42 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  migrate:
+    build: .
+    command: ["node", "src/db/migrate.js"]
+    env_file:
+      - path: .env
+        required: false
+    environment: &app_env
+      NODE_ENV: development
+      DATABASE_URL: postgres://swiftdrop:swiftdrop@postgres:5432/swiftdrop
+      DATABASE_SSL: disable
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-dev-access-secret}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: .env
+        required: false
+    environment: *app_env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
 
 volumes:
+  pg_data:
   redis_data:

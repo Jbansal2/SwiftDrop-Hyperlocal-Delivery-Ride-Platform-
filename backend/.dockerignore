@@ -2,5 +2,7 @@ node_modules
 .env
 .git
 *.log
+coverage
+test
 drizzle/
 README.md

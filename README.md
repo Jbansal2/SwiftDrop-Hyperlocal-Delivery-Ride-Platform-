@@ -9,7 +9,7 @@ Monorepo with:
 
 - **Backend:** Node.js, Fastify, Drizzle ORM, Postgres, Redis
 - **Partner App:** Expo Router, React Native, NativeWind/Tailwind
-- **Infra (local):** Docker Compose (backend + Redis)
+- **Infra (local):** Docker Compose (backend + Postgres + Redis)
 
 ## Repo Structure
 
@@ -25,79 +25,86 @@ partner/   # Expo mobile app
 - Postgres database (local/Neon/etc.)
 - Redis (local) OR Docker
 
-## Quick Start — Backend (Local)
+## Quick Start — Backend (Docker, recommended)
+
+One command brings up Postgres, Redis, runs the migrations and starts the API:
 
 ```bash
 cd backend
-npm install
+docker compose up --build
 ```
 
-Create `backend/.env`:
+- API: `http://localhost:3000` — health: `GET /health` (checks Postgres + Redis, 503 if either is down)
+- No `.env` is needed for this; compose ships dev-only defaults. Copy `.env.example` to `.env` to add real keys.
+- Outside `NODE_ENV=production`, OTPs are logged instead of sent, maps fall back to a mock distance
+  and Cloudinary uploads are skipped, so the whole flow works with no external accounts.
 
-```env
-# Core
-NODE_ENV=development
-PORT=3000
+## Quick Start — Backend (Local)
 
-# Database
-DATABASE_URL=postgres://USER:PASSWORD@HOST:PORT/DB
-
-# Redis
-REDIS_URL=redis://localhost:6379
-
-# Auth
-JWT_SECRET=change-me
-JWT_REFRESH_SECRET=change-me-too
-
-# SMS (Fast2SMS)
-FAST2SMS_API_KEY=your_fast2sms_key
-
-# Maps (optional; backend falls back to mock values in development if missing)
-OLA_MAPS_API_KEY=
-
-# Payments
-RAZORPAY_KEY_ID=
-RAZORPAY_KEY_SECRET=
-
-# Cloudinary (for driver documents upload)
-CLOUDINARY_CLOUD_NAME=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
-```
-
-Run dev server:
+Needs Node 20+, a Postgres and a Redis.
 
 ```bash
+cd backend
+cp .env.example .env      # then edit DATABASE_URL / REDIS_URL / JWT secrets
+npm ci
+npm run migrate           # applies src/db/migrations
 npm run dev
 ```
 
-Health check:
-
-- `GET http://localhost:3000/`
+Every variable is documented in [`backend/.env.example`](backend/.env.example). The app refuses to start
+if `DATABASE_URL`, `JWT_SECRET` or `JWT_REFRESH_SECRET` is missing.
 
 ### Backend Scripts
 
 From `backend/`:
 
-- `npm run dev` — start with nodemon
-- `npm run start` — start with node
-- `npm run db:push` — push schema changes via drizzle-kit
-- `npm run db:studio` — open Drizzle Studio
+| script | what it does |
+| --- | --- |
+| `npm run dev` | start with nodemon |
+| `npm start` | start with node |
+| `npm test` | unit + end-to-end flow tests (no services needed) |
+| `npm run test:coverage` | same, fails under 75% line coverage |
+| `npm run lint` / `lint:fix` | ESLint |
+| `npm run migrate` | apply migrations (works in the production image) |
+| `npm run db:generate` | create a new migration after editing `src/db/schema` |
+| `npm run db:studio` | open Drizzle Studio |
 
-## Quick Start — Backend (Docker)
-
-If you prefer Docker + Redis:
+## Testing
 
 ```bash
 cd backend
-# Make sure DATABASE_URL, JWT_SECRET, FAST2SMS_API_KEY are available in your environment or in an .env file
-docker compose up --build
+npm test
 ```
 
-Notes:
+Tests need nothing running. `NODE_ENV=test` swaps in an in-process Postgres
+([PGlite](https://pglite.dev)) with the real migrations applied, and an in-memory Redis, so the
+suites in `backend/test/` drive full ride, parcel, COD and payment flows through the HTTP API:
 
-- Compose provides Redis at `redis://redis:6379` inside the container.
-- You still need a reachable Postgres `DATABASE_URL`.
+- `fares`, `otp`, `payment`, `access`, `locations` — pure logic
+- `app` — auth guards, validation, error handling, health
+- `flows` — OTP login and lockout, token rotation, driver onboarding and approval,
+  ride and parcel lifecycles, COD, Razorpay verification
+
+CI (`.github/workflows/ci.yml`) runs lint, the tests with the coverage gate and `npm audit` on every
+push and PR, then migrates and boots the server against real Postgres and Redis, and builds the
+Docker image.
+
+## Architecture
+
+```
+src/
+  server.js          process entry: connects, listens, graceful shutdown
+  app.js             buildApp(): plugins, error handler, routes, /health (used by tests)
+  config/env.js      validated environment, single place that reads process.env
+  lib/               logger (pino), access rules, shared schemas, driver lookups
+  middleware/        authenticate, requireRole('admin' | 'driver')
+  routes/<area>/     HTTP handlers, one plugin per prefix
+  services/          fares + maps, razorpay, driver geo locations
+  db/schema, db/migrations
+```
+
+Logs are structured JSON (pino) with a request id on every line; send `x-request-id` to correlate.
+Authorization headers, OTPs and tokens are redacted.
 
 ## Quick Start — Partner App (Expo)
 
@@ -122,11 +129,12 @@ Base prefixes (registered in backend):
 
 ## Development Notes
 
-- OTP sending uses Fast2SMS in production mode. In `NODE_ENV=development`, OTP is logged to console.
+- OTP sending uses Fast2SMS in production mode. Otherwise the OTP is written to the log.
 - Maps: if `OLA_MAPS_API_KEY` is not set in development, backend returns mock distance/duration.
 
 ## Troubleshooting
 
 - **401 Token Not Found:** send `Authorization: Bearer <token>` header.
+- **500 with a requestId:** search the logs for that `reqId`; details are never sent to the client.
 - **Redis errors:** verify `REDIS_URL` and that Redis is running.
 - **DB connection failed:** verify `DATABASE_URL` (and that the DB is reachable).
