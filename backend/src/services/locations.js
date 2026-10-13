@@ -16,7 +16,20 @@ export const locations = {
 
   // GEOSEARCH replaces GEORADIUS, which is deprecated since redis 6.2
   async nearby(lat, lng, radiusKm, limit = 5) {
-    const rows = await redis.geosearch(KEY, 'FROMLONLAT', lng, lat, 'BYRADIUS', radiusKm, 'km', 'ASC', 'COUNT', limit, 'WITHCOORD', 'WITHDIST')
+    const rows = await redis.geosearch(
+      KEY,
+      'FROMLONLAT',
+      lng,
+      lat,
+      'BYRADIUS',
+      radiusKm,
+      'km',
+      'ASC',
+      'COUNT',
+      limit,
+      'WITHCOORD',
+      'WITHDIST'
+    )
     return rows.map(([userId, dist, [lon, la]]) => ({
       userId,
       distanceKm: Number(dist),

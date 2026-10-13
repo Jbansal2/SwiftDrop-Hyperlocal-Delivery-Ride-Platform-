@@ -6,7 +6,9 @@ import { testApp, bearer, tokenFor } from './helpers.js'
 let app
 before(async () => {
   app = await testApp()
-  app.get('/__boom', async () => { throw new Error('db password is hunter2') })
+  app.get('/__boom', async () => {
+    throw new Error('db password is hunter2')
+  })
   await app.ready()
 })
 after(() => app.close())
@@ -26,7 +28,14 @@ test('/health is 200 when every dependency answers', async () => {
 })
 
 test('/health is 503 and names the failing dependency', async () => {
-  const sick = await testApp({ healthChecks: { db: async () => {}, redis: async () => { throw new Error('down') } } })
+  const sick = await testApp({
+    healthChecks: {
+      db: async () => {},
+      redis: async () => {
+        throw new Error('down')
+      }
+    }
+  })
   const res = await sick.inject({ url: '/health' })
   assert.equal(res.statusCode, 503)
   assert.deepEqual(res.json().checks, { db: 'ok', redis: 'down' })
@@ -84,13 +93,20 @@ test('admin routes reject senders and drivers with 403', async () => {
 })
 
 test('driver-only routes reject a sender', async () => {
-  const res = await inject({ method: 'PATCH', url: '/driver/location', headers: bearer('sender'), payload: { lat: 28.6, lng: 77.2 } })
+  const res = await inject({
+    method: 'PATCH',
+    url: '/driver/location',
+    headers: bearer('sender'),
+    payload: { lat: 28.6, lng: 77.2 }
+  })
   assert.equal(res.statusCode, 403)
 })
 
 test('cod-collect is driver only', async () => {
   const res = await inject({
-    method: 'POST', url: '/payment/cod-collect', headers: bearer('sender'),
+    method: 'POST',
+    url: '/payment/cod-collect',
+    headers: bearer('sender'),
     payload: { orderId: '11111111-1111-4111-8111-111111111111' }
   })
   assert.equal(res.statusCode, 403)
@@ -98,7 +114,8 @@ test('cod-collect is driver only', async () => {
 
 test('login cannot self-assign the admin role', async () => {
   const res = await inject({
-    method: 'POST', url: '/auth/verify-otp',
+    method: 'POST',
+    url: '/auth/verify-otp',
     payload: { phone: '9876543210', otp: '123456', role: 'admin' }
   })
   assert.equal(res.statusCode, 400)
@@ -116,7 +133,9 @@ test('ride ids must be uuids', async () => {
 
 test('ride estimate rejects out-of-range coordinates', async () => {
   const res = await inject({
-    method: 'POST', url: '/ride/estimate', headers: bearer('sender'),
+    method: 'POST',
+    url: '/ride/estimate',
+    headers: bearer('sender'),
     payload: { pickupLat: 200, pickupLng: 77.2, dropLat: 28.5, dropLng: 77.1 }
   })
   assert.equal(res.statusCode, 400)
@@ -124,11 +143,21 @@ test('ride estimate rejects out-of-range coordinates', async () => {
 
 test('order create rejects an unknown payment mode', async () => {
   const res = await inject({
-    method: 'POST', url: '/order/create', headers: bearer('sender'),
+    method: 'POST',
+    url: '/order/create',
+    headers: bearer('sender'),
     payload: {
-      senderName: 'Asha', senderPhone: '9876543210', receiverName: 'Ravi', receiverPhone: '9123456789',
-      pickupAddress: 'Sector 15', pickupLat: 28.6, pickupLng: 77.2,
-      dropAddress: 'Sector 62', dropLat: 28.62, dropLng: 77.36, paymentMode: 'crypto'
+      senderName: 'Asha',
+      senderPhone: '9876543210',
+      receiverName: 'Ravi',
+      receiverPhone: '9123456789',
+      pickupAddress: 'Sector 15',
+      pickupLat: 28.6,
+      pickupLng: 77.2,
+      dropAddress: 'Sector 62',
+      dropLat: 28.62,
+      dropLng: 77.36,
+      paymentMode: 'crypto'
     }
   })
   assert.equal(res.statusCode, 400)
@@ -136,7 +165,9 @@ test('order create rejects an unknown payment mode', async () => {
 
 test('payment type must be ride or order', async () => {
   const res = await inject({
-    method: 'POST', url: '/payment/create-order', headers: bearer('sender'),
+    method: 'POST',
+    url: '/payment/create-order',
+    headers: bearer('sender'),
     payload: { referenceId: '11111111-1111-4111-8111-111111111111', type: 'wallet' }
   })
   assert.equal(res.statusCode, 400)
@@ -144,7 +175,9 @@ test('payment type must be ride or order', async () => {
 
 test('a forged razorpay signature is rejected before any db write', async () => {
   const res = await inject({
-    method: 'POST', url: '/payment/verify', headers: bearer('sender'),
+    method: 'POST',
+    url: '/payment/verify',
+    headers: bearer('sender'),
     payload: { razorpayOrderId: 'order_1', razorpayPaymentId: 'pay_1', razorpaySignature: 'f'.repeat(64) }
   })
   assert.equal(res.statusCode, 400)

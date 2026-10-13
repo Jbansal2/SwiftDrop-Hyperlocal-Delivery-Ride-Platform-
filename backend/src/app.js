@@ -14,7 +14,9 @@ import paymentRoutes from './routes/payment/index.js'
 export const VERSION = '1.1.0'
 
 function corsOrigin() {
-  const allowed = env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+  const allowed = env.CORS_ORIGINS.split(',')
+    .map((o) => o.trim())
+    .filter(Boolean)
   // no list in dev means "allow all" so Expo on a LAN IP just works
   if (allowed.length === 0) return !isProduction
   return allowed

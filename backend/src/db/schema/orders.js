@@ -1,10 +1,10 @@
 import { pgTable, uuid, varchar, timestamp, pgEnum, decimal, text, boolean } from 'drizzle-orm/pg-core'
 
 export const orderStatusEnum = pgEnum('order_status', [
-  'pending', 
-  'accepted', 
-  'picked_up', 
-  'in_transit', 
+  'pending',
+  'accepted',
+  'picked_up',
+  'in_transit',
   'delivered',
   'cancelled'
 ])

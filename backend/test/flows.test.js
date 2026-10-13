@@ -17,7 +17,9 @@ import { locations } from '../src/services/locations.js'
 let app
 const call = async (method, url, token, payload) => {
   const res = await app.inject({
-    method, url, payload,
+    method,
+    url,
+    payload,
     headers: token ? { authorization: `Bearer ${token}` } : {}
   })
   return { status: res.statusCode, body: res.json() }
@@ -39,7 +41,16 @@ async function adminToken() {
 async function approvedDriver(phone, admin) {
   const session = await login(phone, 'driver')
   const t = session.accessToken
-  assert.equal((await call('POST', '/driver/register', t, { name: `Driver ${phone}`, vehicleNumber: 'DL01AB1234', vehicleType: 'bike' })).status, 201)
+  assert.equal(
+    (
+      await call('POST', '/driver/register', t, {
+        name: `Driver ${phone}`,
+        vehicleNumber: 'DL01AB1234',
+        vehicleType: 'bike'
+      })
+    ).status,
+    201
+  )
   for (const docType of ['aadhaar', 'license', 'rc', 'insurance']) {
     const up = await call('POST', '/driver/documents/upload', t, { docType, frontImage: 'data:image/png;base64,AAAA' })
     assert.equal(up.status, 200, JSON.stringify(up.body))
@@ -52,15 +63,28 @@ async function approvedDriver(phone, admin) {
 }
 
 const trip = {
-  pickupLat: 28.6139, pickupLng: 77.209, dropLat: 28.5355, dropLng: 77.391,
-  pickupAddress: 'Connaught Place', dropAddress: 'Sector 18 Noida'
+  pickupLat: 28.6139,
+  pickupLng: 77.209,
+  dropLat: 28.5355,
+  dropLng: 77.391,
+  pickupAddress: 'Connaught Place',
+  dropAddress: 'Sector 18 Noida'
 }
 
 const parcel = {
-  senderName: 'Asha', senderPhone: '9876500001', receiverName: 'Ravi', receiverPhone: '9123400002',
-  pickupAddress: 'Lajpat Nagar', pickupLat: 28.567, pickupLng: 77.243,
-  dropAddress: 'Saket', dropLat: 28.524, dropLng: 77.206,
-  paymentMode: 'cod', codAmount: 499, weightKg: 2
+  senderName: 'Asha',
+  senderPhone: '9876500001',
+  receiverName: 'Ravi',
+  receiverPhone: '9123400002',
+  pickupAddress: 'Lajpat Nagar',
+  pickupLat: 28.567,
+  pickupLng: 77.243,
+  dropAddress: 'Saket',
+  dropLat: 28.524,
+  dropLng: 77.206,
+  paymentMode: 'cod',
+  codAmount: 499,
+  weightKg: 2
 }
 
 let admin, sender, stranger, d1, d2
@@ -116,7 +140,11 @@ describe('auth', () => {
 describe('drivers', () => {
   test('an unapproved driver cannot go online', async () => {
     const s = await login('9876500020', 'driver')
-    await call('POST', '/driver/register', s.accessToken, { name: 'New Guy', vehicleNumber: 'UP16XY9999', vehicleType: 'auto' })
+    await call('POST', '/driver/register', s.accessToken, {
+      name: 'New Guy',
+      vehicleNumber: 'UP16XY9999',
+      vehicleType: 'auto'
+    })
     const res = await call('PATCH', '/driver/toggle-status', s.accessToken, { isOnline: true })
     assert.equal(res.status, 403)
   })
@@ -124,7 +152,9 @@ describe('drivers', () => {
   test('an approved driver can go online and appears nearby', async (t) => {
     // ioredis-mock has no GEO commands; keep positions in a map for this test
     const seen = new Map()
-    t.mock.method(locations, 'update', async (userId, lat, lng) => { seen.set(userId, { lat, lng }) })
+    t.mock.method(locations, 'update', async (userId, lat, lng) => {
+      seen.set(userId, { lat, lng })
+    })
     t.mock.method(locations, 'nearby', async () => [...seen].map(([userId, p]) => ({ userId, distanceKm: 0.1, ...p })))
 
     assert.equal((await call('PATCH', '/driver/toggle-status', d1.token, { isOnline: true })).status, 200)
@@ -206,7 +236,9 @@ describe('ride lifecycle', () => {
 
   test('the rider can cancel a ride that has not started', async () => {
     const booked = await call('POST', '/ride/book', sender.accessToken, trip)
-    const res = await call('PATCH', `/ride/${booked.body.ride.id}/cancel`, sender.accessToken, { reason: 'changed plans' })
+    const res = await call('PATCH', `/ride/${booked.body.ride.id}/cancel`, sender.accessToken, {
+      reason: 'changed plans'
+    })
     assert.equal(res.status, 200)
     const [row] = await db.select().from(rides).where(eq(rides.id, booked.body.ride.id))
     assert.equal(row.status, 'cancelled')
@@ -261,12 +293,19 @@ describe('parcel lifecycle with COD', () => {
 
 describe('online payments', () => {
   test('a valid signature marks the payment paid exactly once', async () => {
-    const [p] = await db.insert(payments).values({
-      userId: sender.user.id, referenceId: '22222222-2222-4222-8222-222222222222',
-      type: 'ride', amount: '120', razorpayOrderId: 'order_test_1'
-    }).returning()
+    const [p] = await db
+      .insert(payments)
+      .values({
+        userId: sender.user.id,
+        referenceId: '22222222-2222-4222-8222-222222222222',
+        type: 'ride',
+        amount: '120',
+        razorpayOrderId: 'order_test_1'
+      })
+      .returning()
     const body = {
-      razorpayOrderId: 'order_test_1', razorpayPaymentId: 'pay_test_1',
+      razorpayOrderId: 'order_test_1',
+      razorpayPaymentId: 'pay_test_1',
       razorpaySignature: signPayment('order_test_1', 'pay_test_1')
     }
     assert.equal((await call('POST', '/payment/verify', sender.accessToken, body)).status, 200)
@@ -277,11 +316,15 @@ describe('online payments', () => {
 
   test("you cannot verify someone else's payment", async () => {
     await db.insert(payments).values({
-      userId: sender.user.id, referenceId: '33333333-3333-4333-8333-333333333333',
-      type: 'ride', amount: '80', razorpayOrderId: 'order_test_2'
+      userId: sender.user.id,
+      referenceId: '33333333-3333-4333-8333-333333333333',
+      type: 'ride',
+      amount: '80',
+      razorpayOrderId: 'order_test_2'
     })
     const res = await call('POST', '/payment/verify', stranger.accessToken, {
-      razorpayOrderId: 'order_test_2', razorpayPaymentId: 'pay_x',
+      razorpayOrderId: 'order_test_2',
+      razorpayPaymentId: 'pay_x',
       razorpaySignature: signPayment('order_test_2', 'pay_x')
     })
     assert.equal(res.status, 404)
@@ -289,13 +332,19 @@ describe('online payments', () => {
 
   test("you cannot open a payment for someone else's ride", async () => {
     const booked = await call('POST', '/ride/book', stranger.accessToken, trip)
-    const res = await call('POST', '/payment/create-order', sender.accessToken, { referenceId: booked.body.ride.id, type: 'ride' })
+    const res = await call('POST', '/payment/create-order', sender.accessToken, {
+      referenceId: booked.body.ride.id,
+      type: 'ride'
+    })
     assert.equal(res.status, 404)
   })
 
   test('COD orders cannot be paid online', async () => {
     const created = await call('POST', '/order/create', sender.accessToken, parcel)
-    const res = await call('POST', '/payment/create-order', sender.accessToken, { referenceId: created.body.order.id, type: 'order' })
+    const res = await call('POST', '/payment/create-order', sender.accessToken, {
+      referenceId: created.body.order.id,
+      type: 'order'
+    })
     assert.equal(res.status, 400)
   })
 })

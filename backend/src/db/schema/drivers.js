@@ -1,7 +1,12 @@
 import { pgTable, uuid, varchar, boolean, timestamp, pgEnum, decimal, text, uniqueIndex } from 'drizzle-orm/pg-core'
 
 export const driverStatusEnum = pgEnum('driver_status', [
-  'registered', 'docs_uploaded', 'under_review', 'active', 'rejected', 'suspended'
+  'registered',
+  'docs_uploaded',
+  'under_review',
+  'active',
+  'rejected',
+  'suspended'
 ])
 
 export const vehicleTypeEnum = pgEnum('vehicle_type', ['bike', 'auto'])
@@ -23,23 +28,25 @@ export const drivers = pgTable('drivers', {
   createdAt: timestamp('created_at').defaultNow()
 })
 
-export const docTypeEnum = pgEnum('doc_type', [
-  'aadhaar', 'license', 'rc', 'insurance', 'pan', 'selfie'
-])
+export const docTypeEnum = pgEnum('doc_type', ['aadhaar', 'license', 'rc', 'insurance', 'pan', 'selfie'])
 
 export const docStatusEnum = pgEnum('doc_status', ['pending', 'approved', 'rejected'])
 
-export const driverDocuments = pgTable('driver_documents', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  driverId: uuid('driver_id').notNull(),
-  docType: docTypeEnum('doc_type').notNull(),
-  docNumber: varchar('doc_number', { length: 50 }),
-  frontUrl: text('front_url').notNull(),
-  backUrl: text('back_url'),
-  status: docStatusEnum('status').default('pending'),
-  rejectionReason: text('rejection_reason'),
-  uploadedAt: timestamp('uploaded_at').defaultNow()
-}, (t) => [
-  // the upload route upserts on (driver_id, doc_type); postgres refuses ON CONFLICT without this
-  uniqueIndex('driver_documents_driver_doc_type_idx').on(t.driverId, t.docType)
-])
+export const driverDocuments = pgTable(
+  'driver_documents',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    driverId: uuid('driver_id').notNull(),
+    docType: docTypeEnum('doc_type').notNull(),
+    docNumber: varchar('doc_number', { length: 50 }),
+    frontUrl: text('front_url').notNull(),
+    backUrl: text('back_url'),
+    status: docStatusEnum('status').default('pending'),
+    rejectionReason: text('rejection_reason'),
+    uploadedAt: timestamp('uploaded_at').defaultNow()
+  },
+  (t) => [
+    // the upload route upserts on (driver_id, doc_type); postgres refuses ON CONFLICT without this
+    uniqueIndex('driver_documents_driver_doc_type_idx').on(t.driverId, t.docType)
+  ]
+)

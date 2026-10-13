@@ -28,6 +28,8 @@ jobs:
 
       - run: npm run lint
 
+      - run: npm run format:check
+
       # tsc --checkJs over src and test, nothing is emitted
       - run: npm run typecheck
 

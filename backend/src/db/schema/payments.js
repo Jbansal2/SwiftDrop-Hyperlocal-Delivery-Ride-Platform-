@@ -1,8 +1,6 @@
 import { pgTable, uuid, varchar, decimal, timestamp, pgEnum } from 'drizzle-orm/pg-core'
 
-export const paymentStatusEnum = pgEnum('payment_status', [
-  'created', 'paid', 'failed', 'refunded'
-])
+export const paymentStatusEnum = pgEnum('payment_status', ['created', 'paid', 'failed', 'refunded'])
 
 export const paymentTypeEnum = pgEnum('payment_type', ['ride', 'order'])
 

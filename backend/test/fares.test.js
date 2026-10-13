@@ -16,7 +16,11 @@ test('surge multiplies the fare', () => {
 })
 
 test('driver earning + platform cut always equals the fare', () => {
-  for (const [km, min, surge] of [[1, 3, 1], [7.3, 22, 1.2], [15, 40, 2]]) {
+  for (const [km, min, surge] of [
+    [1, 3, 1],
+    [7.3, 22, 1.2],
+    [15, 40, 2]
+  ]) {
     const { fare, platformCut, driverEarning } = calculateFare(km, min, surge)
     assert.equal(platformCut + driverEarning, fare)
   }
