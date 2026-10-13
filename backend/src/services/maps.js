@@ -1,10 +1,12 @@
 import axios from 'axios'
+import { env, isProduction } from '../config/env.js'
+import { childLogger } from '../lib/logger.js'
 
-const OLA_KEY = process.env.OLA_MAPS_API_KEY
+const log = childLogger('maps')
 export async function getDistanceAndDuration(pickupLat, pickupLng, dropLat, dropLng) {
     try {
-        if (process.env.NODE_ENV === 'development' && !OLA_KEY) {
-            console.log('[DEV] Using mock distance data')
+        if (!isProduction && !env.OLA_MAPS_API_KEY) {
+            log.debug('no OLA_MAPS_API_KEY, using mock distance')
             return { distanceKm: 5.2, durationMin: 18 }
         }
 
@@ -13,8 +15,9 @@ export async function getDistanceAndDuration(pickupLat, pickupLng, dropLat, drop
                 origin: `${pickupLat},${pickupLng}`,
                 destination: `${dropLat},${dropLng}`,
                 mode: 'two_wheeler',
-                api_key: OLA_KEY
-            }
+                api_key: env.OLA_MAPS_API_KEY
+            },
+            timeout: 10_000
         })
         const route = res.data.routes[0]
         return {
@@ -22,7 +25,7 @@ export async function getDistanceAndDuration(pickupLat, pickupLng, dropLat, drop
             durationMin: Math.ceil(route.legs[0].duration / 60)
         }
     } catch (err) {
-        console.error('Ola Maps error:', err.message)
+        log.warn({ err: err.message }, 'ola maps failed, using fallback distance')
         return { distanceKm: 5.0, durationMin: 15 }
     }
 }

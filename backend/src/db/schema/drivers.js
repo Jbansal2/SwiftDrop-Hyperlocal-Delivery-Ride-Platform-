@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, boolean, timestamp, pgEnum, decimal, text } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, varchar, boolean, timestamp, pgEnum, decimal, text, uniqueIndex } from 'drizzle-orm/pg-core'
 
 export const driverStatusEnum = pgEnum('driver_status', [
   'registered', 'docs_uploaded', 'under_review', 'active', 'rejected', 'suspended'
@@ -8,7 +8,7 @@ export const vehicleTypeEnum = pgEnum('vehicle_type', ['bike', 'auto'])
 
 export const drivers = pgTable('drivers', {
   id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').notNull(),
+  userId: uuid('user_id').unique().notNull(),
   name: varchar('name', { length: 100 }).notNull(),
   phone: varchar('phone', { length: 15 }).unique().notNull(),
   status: driverStatusEnum('status').default('registered').notNull(),
@@ -39,4 +39,7 @@ export const driverDocuments = pgTable('driver_documents', {
   status: docStatusEnum('status').default('pending'),
   rejectionReason: text('rejection_reason'),
   uploadedAt: timestamp('uploaded_at').defaultNow()
-})
+}, (t) => [
+  // the upload route upserts on (driver_id, doc_type); postgres refuses ON CONFLICT without this
+  uniqueIndex('driver_documents_driver_doc_type_idx').on(t.driverId, t.docType)
+])
