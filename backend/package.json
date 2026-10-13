@@ -34,7 +34,7 @@
     "jsonwebtoken": "^9.0.3",
     "pino": "^9.14.0",
     "postgres": "^3.4.8",
-    "razorpay": "^2.9.6"
+    "razorpay": "^2.9.8"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.9",
