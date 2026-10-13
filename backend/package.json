@@ -24,7 +24,7 @@
   "license": "ISC",
   "description": "SwiftDrop Backend",
   "dependencies": {
-    "@fastify/cors": "^11.2.0",
+    "@fastify/cors": "^11.3.1",
     "axios": "^1.13.6",
     "cloudinary": "^2.9.0",
     "dotenv": "^17.3.1",
