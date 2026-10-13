@@ -29,7 +29,7 @@ export async function buildApp(opts = {}) {
 
   await app.register(cors, { origin: corsOrigin() })
 
-  app.setErrorHandler((err, req, reply) => {
+  app.setErrorHandler((/** @type {import('fastify').FastifyError} */ err, req, reply) => {
     const status = err.statusCode ?? 500
     if (err.validation) {
       return reply.code(400).send({ success: false, message: err.message })

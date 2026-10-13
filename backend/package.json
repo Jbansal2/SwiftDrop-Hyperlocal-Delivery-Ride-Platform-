@@ -14,7 +14,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "migrate": "node src/db/migrate.js"
+    "migrate": "node src/db/migrate.js",
+    "typecheck": "tsc -p ."
   },
   "keywords": [],
   "author": "",
@@ -36,11 +37,13 @@
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.9",
     "@eslint/js": "^9.39.5",
+    "@types/node": "^22.20.5",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.39.5",
     "globals": "^17.13.0",
     "ioredis-mock": "^8.13.1",
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=20"

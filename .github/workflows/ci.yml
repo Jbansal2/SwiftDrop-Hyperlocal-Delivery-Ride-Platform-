@@ -28,6 +28,9 @@ jobs:
 
       - run: npm run lint
 
+      # tsc --checkJs over src and test, nothing is emitted
+      - run: npm run typecheck
+
       # unit + end-to-end flow tests (in-process postgres and redis), fails under 75% line coverage
       - run: npm run test:coverage
 

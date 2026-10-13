@@ -27,5 +27,7 @@ export function redactOrderFor(order, user) {
   return rest
 }
 
+/** @type {Array<'searching' | 'accepted' | 'arrived'>} */
 export const RIDE_CANCELLABLE = ['searching', 'accepted', 'arrived']
+/** @type {Array<'pending' | 'accepted'>} */
 export const ORDER_CANCELLABLE = ['pending', 'accepted']
